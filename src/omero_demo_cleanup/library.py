@@ -38,48 +38,6 @@ from copy import copy
 from getpass import getuser
 from time import time
 
-parser = ArgumentParser()
-parser.add_argument("--days", "-d", type=int, default=0)
-parser.add_argument("--inodes", "-i", type=int, default=0)
-parser.add_argument("--gigabytes", "-g", type=int, default=0)
-parser.add_argument("--force", "-f", default=False, action="store_true")
-ns = parser.parse_args()
-
-# Do not delete data of users who logged out within recent days.
-minimum_days = ns.days
-
-# How many inodes need to be removed, can be 0.
-excess_file_count = ns.inodes
-
-# How many bytes need to be deleted, can be 0; written as n * 1GB.
-excess_file_size = ns.gigabytes * 1000**3
-
-# Leave this as True except when running the script for real.
-dry_run = not ns.force
-
-# https://bugs.python.org/issue11588 would allow argparse to do this.
-if excess_file_count == 0 and excess_file_size == 0:
-    parser.error("specify how much to delete")
-
-# Report configuration.
-
-print('Ignoring users who have logged out within the past {} days.'
-      .format(minimum_days))
-
-if excess_file_count > 0:
-    print('Aiming to delete at least {:,} files.'
-          .format(excess_file_count))
-
-if excess_file_size > 0:
-    print('Aiming to delete at least {:,} bytes of data.'
-          .format(excess_file_size))
-
-if dry_run:
-    print('Despite output, will not actually delete any data.')
-else:
-    print('Running for real: will actually delete data.')
-
-
 # If adjusting UserStats, find_worst, choose_users then check with unit tests.
 
 class UserStats:
@@ -186,7 +144,7 @@ def get_delete_classes(conn):
     return delete_classes
 
 
-def delete_data(conn, user_id):
+def delete_data(conn, user_id, dry_run=dry_run):
     # Delete all the data of the given user. Respects the state of dry_run.
     all_groups = {'omero.group': '-1'}
     params = ParametersI()
@@ -205,7 +163,7 @@ def delete_data(conn, user_id):
         submit(conn, delete, Delete2Response)
 
 
-def find_users(conn):
+def find_users(conn, minimum_days=0):
     # Determine which users' data to consider deleting.
 
     users = {}
@@ -254,12 +212,12 @@ def find_users(conn):
     return users, logouts
 
 
-def resource_usage(conn):
+def resource_usage(conn, minimum_days=0):
     # Note users' resource usage.
     # DiskUsage2.targetClasses remains too inefficient so iterate.
 
     user_stats = []
-    users, logouts = find_users(conn)
+    users, logouts = find_users(conn, minimum_days=minimum_days)
     for user_id, user_name in users.items():
         print('Finding disk usage of "{}" (#{}).'.format(user_name, user_id))
         user = {'Experimenter': [user_id]}
@@ -281,15 +239,17 @@ def resource_usage(conn):
     return user_stats
 
 
-def perform_delete(conn):
+def perform_delete(conn, minimum_days=0, excess_file_count=0, 
+                   excess_file_size=0, dry_run=True):
     # Perform data deletion.
+    stats = resource_usage(conn, minimum_days=minimum_days)
     users = choose_users(excess_file_count, excess_file_size,
                          resource_usage(conn))
     print('Found {} user(s) for deletion.'.format(len(users)))
     for user in users:
         print('Deleting {} GB of data belonging to "{}" (#{}).'.format(
               user.size / 1000**3, user.name, user.id,))
-        delete_data(conn, user.id)
+        delete_data(conn, user.id, dry_run=dry_run)
 
 
 def main():
