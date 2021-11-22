@@ -43,7 +43,6 @@ parser.add_argument("--days", "-d", type=int, default=0)
 parser.add_argument("--inodes", "-i", type=int, default=0)
 parser.add_argument("--gigabytes", "-g", type=int, default=0)
 parser.add_argument("--force", "-f", default=False, action="store_true")
-parser.add_argument("--test", "-t", default=False, action="store_true")
 ns = parser.parse_args()
 
 # Do not delete data of users who logged out within recent days.
@@ -59,7 +58,7 @@ excess_file_size = ns.gigabytes * 1000**3
 dry_run = not ns.force
 
 # https://bugs.python.org/issue11588 would allow argparse to do this.
-if not ns.test and excess_file_count == 0 and excess_file_size == 0:
+if excess_file_count == 0 and excess_file_size == 0:
     parser.error("specify how much to delete")
 
 # Report configuration.
@@ -81,7 +80,7 @@ else:
     print('Running for real: will actually delete data.')
 
 
-# If adjusting UserStats, find_worst, choose_users then check with "--test".
+# If adjusting UserStats, find_worst, choose_users then check with unit tests.
 
 class UserStats:
     # Represents a user and their resource usage.
@@ -282,73 +281,6 @@ def resource_usage(conn):
     return user_stats
 
 
-def run_tests():
-    # Run tests on "choose_users".
-
-    alice = UserStats(0, 'Alice', 0, 0, 0)
-    chloe = UserStats(0, 'Chloe', 0, 1, 0)
-    daisy = UserStats(0, 'Daisy', 0, 2, 0)
-    elsie = UserStats(0, 'Elsie', 1, 0, 0)
-    emily = UserStats(0, 'Emily', 1, 1, 0)
-    ethan = UserStats(0, 'Ethan', 1, 2, 0)
-    freya = UserStats(0, 'Freya', 2, 0, 0)
-    grace = UserStats(0, 'Grace', 2, 1, 0)
-    henry = UserStats(0, 'Henry', 2, 2, 0)
-    isaac = UserStats(0, 'Isaac', 0, 0, 1)
-    jacob = UserStats(0, 'Jacob', 0, 1, 1)
-    james = UserStats(0, 'James', 0, 2, 1)
-    logan = UserStats(0, 'Logan', 1, 0, 1)
-    lucas = UserStats(0, 'Lucas', 1, 1, 1)
-    mason = UserStats(0, 'Mason', 1, 2, 1)
-    oscar = UserStats(0, 'Oscar', 2, 0, 1)
-    poppy = UserStats(0, 'Poppy', 2, 1, 1)
-    sofia = UserStats(0, 'Sofia', 2, 2, 1)
-
-    test_users = [alice, chloe, daisy, elsie, emily, ethan,
-                  freya, grace, henry, isaac, jacob, james,
-                  logan, lucas, mason, oscar, poppy, sofia]
-
-    test_cases = [
-        (0, 0, set()),
-        (1, 1, {'Henry'}),
-        (2, 2, {'Henry'}),
-        (6, 0, {'Freya', 'Grace', 'Henry'}),
-        (6, 2, {'Freya', 'Grace', 'Henry'}),
-        (0, 6, {'Daisy', 'Ethan', 'Henry'}),
-        (2, 6, {'Daisy', 'Ethan', 'Henry'}),
-        (6, 6, {'Ethan', 'Grace', 'Henry', 'Sofia'}),
-        (7, 7, {'Ethan', 'Grace', 'Henry', 'Sofia'}),
-        (6, 8, {'Daisy', 'Ethan', 'Grace', 'Henry', 'Sofia'}),
-        (6, 9, {'Daisy', 'Ethan', 'Grace', 'Henry', 'Sofia'}),
-        (8, 6, {'Ethan', 'Freya', 'Grace', 'Henry', 'Sofia'}),
-        (9, 6, {'Ethan', 'Freya', 'Grace', 'Henry', 'Sofia'}),
-        (2, 15, {'Chloe', 'Daisy', 'Emily', 'Ethan', 'Grace', 'Henry',
-                 'James', 'Mason', 'Sofia'}),
-        (6, 15, {'Chloe', 'Daisy', 'Emily', 'Ethan', 'Grace', 'Henry',
-                 'James', 'Mason', 'Sofia'}),
-        (15, 2, {'Elsie', 'Emily', 'Ethan', 'Freya', 'Grace', 'Henry',
-                 'Oscar', 'Poppy', 'Sofia'}),
-        (15, 6, {'Elsie', 'Emily', 'Ethan', 'Freya', 'Grace', 'Henry',
-                 'Oscar', 'Poppy', 'Sofia'}),
-        (13, 13, {'Daisy', 'Emily', 'Ethan', 'Freya', 'Grace', 'Henry',
-                  'Mason', 'Poppy', 'Sofia'})]
-
-    case_number = 0
-
-    def test(case_number):
-        for file_count, file_size, expected_names in test_cases:
-            case_number += 1
-            copied_users = list(map(copy, test_users))
-            chosen = choose_users(file_count, file_size, copied_users)
-            actual_names = set([user.name for user in chosen])
-            assert actual_names == expected_names
-        return case_number
-
-    case_number = test(case_number)
-    test_users.reverse()
-    case_number = test(case_number)
-
-
 def perform_delete(conn):
     # Perform data deletion.
     users = choose_users(excess_file_count, excess_file_size,
@@ -361,11 +293,6 @@ def perform_delete(conn):
 
 
 def main():
-
-    if ns.test:
-        print('Running tests, will then exit.')
-        run_tests()
-        return  # EARLY EXIT
 
     with omero.cli.cli_login() as cli:
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())
