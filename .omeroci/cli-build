@@ -1,0 +1,18 @@
+#!/bin/bash
+source /infra/utils
+
+set -e
+set -u
+set -x
+
+TARGET=${TARGET:-..}
+cd $TARGET
+
+GUESS=${PWD#*omero-cli-*}
+PLUGIN=${PLUGIN:-$GUESS}
+
+export OMERO_DIST=${OMERO_DIST:-/opt/omero/server/OMERO.server}
+omero $PLUGIN -h
+
+export ICE_CONFIG=${OMERO_DIST}/etc/ice.config
+pytest -sv test
