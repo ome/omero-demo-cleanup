@@ -18,11 +18,13 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from copy import copy
+from typing import Set, Tuple
 
+import pytest
 from omero_demo_cleanup.library import UserStats, choose_users
 
 
-def test_stats() -> None:
+class TestStats:
     # Run tests on "choose_users".
 
     alice = UserStats(0, "Alice", 0, 0, 0)
@@ -156,17 +158,19 @@ def test_stats() -> None:
         ),
     ]
 
-    case_number = 0
+    @pytest.mark.parametrize("test_case", test_cases)
+    def test_choose_users(self, test_case: Tuple[int, int, Set[str]]) -> None:
+        file_count, file_size, expected_names = test_case
+        copied_users = copy(self.test_users)
+        chosen = choose_users(file_count, file_size, copied_users)
+        actual_names = {user.name for user in chosen}
+        assert actual_names == expected_names
 
-    def test(case_number: int) -> int:
-        for file_count, file_size, expected_names in test_cases:
-            case_number += 1
-            copied_users = copy(test_users)
-            chosen = choose_users(file_count, file_size, copied_users)
-            actual_names = {user.name for user in chosen}
-            assert actual_names == expected_names
-        return case_number
-
-    case_number = test(case_number)
-    test_users.reverse()
-    case_number = test(case_number)
+    @pytest.mark.parametrize("test_case", test_cases)
+    def test_choose_users_reverse(self, test_case: Tuple[int, int, Set[str]]) -> None:
+        file_count, file_size, expected_names = test_case
+        copied_users = copy(self.test_users)
+        copied_users.reverse()
+        chosen = choose_users(file_count, file_size, copied_users)
+        actual_names = {user.name for user in chosen}
+        assert actual_names == expected_names
