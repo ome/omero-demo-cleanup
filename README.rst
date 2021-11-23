@@ -1,4 +1,4 @@
-.. image:: https://github.com/ome/omero-demo-cleanup/workflows/Precommit/badge.svg
+.. image:: https://github.com/ome/omero-demo-cleanup/workflows/OMERO/badge.svg
    :target: https://github.com/ome/omero-demo-cleanup/actions
 
 .. image:: https://badge.fury.io/py/omero-demo-cleanup.svg
@@ -10,10 +10,13 @@ OMERO demo cleanup
 This OMERO command-line plugin allows you to compute the space per user, find
 the users with the biggest amount of data and free disk space on a server
 
-To run::
+To generate the list of users which data must be deleted to free 300GB on the
+system without running the deletion::
 
-    $ omero demo-cleanup
+    $ omero demo-cleanup --gigabytes 300
 
-To free disk space (WARNING: data will be permanently deleted)::
+To generate the list of users which data must be deleted to free 300GB on the
+system and running the deletion (WARNING: data belonging to these users will
+be removed permanently)::
 
-    $ omero demo-cleanup
+    $ omero demo-cleanup --gigabytes 300 --force
