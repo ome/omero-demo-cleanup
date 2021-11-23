@@ -73,7 +73,6 @@ class DemoCleanupControl(BaseControl):
         )
         parser.add_argument(
             "--gigabytes",
-            "-g",
             type=int,
             default=0,
             help="How many bytes need to be deleted (in GB). Default: 0.",
