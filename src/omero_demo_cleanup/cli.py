@@ -95,17 +95,17 @@ class DemoCleanupControl(BaseControl):
 
         try:
             # Perform data deletion.
-            self.ctx.info(
+            self.ctx.err(
                 "Ignoring users who have logged out within the past {} days.".format(
                     args.minimum_days
                 )
             )
 
             if args.inodes > 0:
-                self.ctx.info(f"Aiming to delete at least {args.inodes:,} files.")
+                self.ctx.err(f"Aiming to delete at least {args.inodes:,} files.")
 
             if args.gigabytes > 0:
-                self.ctx.info(
+                self.ctx.err(
                     "Aiming to delete at least {:,} bytes of data.".format(
                         args.gigabytes
                     )
@@ -113,9 +113,9 @@ class DemoCleanupControl(BaseControl):
 
             stats = resource_usage(self.conn, minimum_days=args.days)
             users = choose_users(args.inodes, args.gigabytes * 1000 ** 3, stats)
-            self.ctx.info(f"Found {len(users)} user(s) for deletion.")
+            self.ctx.err(f"Found {len(users)} user(s) for deletion.")
             for user in users:
-                self.ctx.info(
+                self.ctx.err(
                     'Deleting {} GB of data belonging to "{}" (#{}).'.format(
                         user.size / 1000 ** 3,
                         user.name,
@@ -124,9 +124,9 @@ class DemoCleanupControl(BaseControl):
                 )
                 dry_run = not args.force
                 if dry_run:
-                    self.ctx.info("Despite output, will not actually delete any data.")
+                    self.ctx.err("Despite output, will not actually delete any data.")
                 else:
-                    self.ctx.info("Running for real: will actually delete data.")
+                    self.ctx.err("Running for real: will actually delete data.")
                 delete_data(self.gateway, user.id, dry_run=dry_run)
         except KeyboardInterrupt:
             pass  # ignore
