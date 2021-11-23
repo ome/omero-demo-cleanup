@@ -17,7 +17,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from copy import copy
+from copy import deepcopy
 from typing import Set, Tuple
 
 import pytest
@@ -161,7 +161,7 @@ class TestStats:
     @pytest.mark.parametrize("test_case", test_cases)
     def test_choose_users(self, test_case: Tuple[int, int, Set[str]]) -> None:
         file_count, file_size, expected_names = test_case
-        copied_users = copy(self.test_users)
+        copied_users = deepcopy(self.test_users)
         chosen = choose_users(file_count, file_size, copied_users)
         actual_names = {user.name for user in chosen}
         assert actual_names == expected_names
@@ -169,7 +169,7 @@ class TestStats:
     @pytest.mark.parametrize("test_case", test_cases)
     def test_choose_users_reverse(self, test_case: Tuple[int, int, Set[str]]) -> None:
         file_count, file_size, expected_names = test_case
-        copied_users = copy(self.test_users)
+        copied_users = deepcopy(self.test_users)
         copied_users.reverse()
         chosen = choose_users(file_count, file_size, copied_users)
         actual_names = {user.name for user in chosen}
