@@ -161,7 +161,7 @@ def test_stats() -> None:
     def test(case_number: int) -> int:
         for file_count, file_size, expected_names in test_cases:
             case_number += 1
-            copied_users = list(map(copy, test_users))
+            copied_users = copy(test_users)
             chosen = choose_users(file_count, file_size, copied_users)
             actual_names = {user.name for user in chosen}
             assert actual_names == expected_names
