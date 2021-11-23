@@ -20,49 +20,58 @@
 # Delete users' data to free space on the server.
 # author: m.t.b.carroll@dundee.ac.uk
 
-import omero
+import sys
+from time import time
+from typing import Dict, List, Tuple
 
+import omero
+from omero.cmd import (
+    Delete2,
+    Delete2Response,
+    DiskUsage2,
+    DiskUsage2Response,
+    HandlePrx,
+    LegalGraphTargets,
+    LegalGraphTargetsResponse,
+)
 from omero.gateway import BlitzGateway
 from omero.rtypes import rlong
 from omero.sys import ParametersI
-from omero.cli import cli_login
-from omero.cmd import \
-    Delete2, Delete2Response, \
-    DiskUsage2, DiskUsage2Response, \
-    LegalGraphTargets, LegalGraphTargetsResponse
-
-import sys
-
-from argparse import ArgumentParser
-from copy import copy
-from getpass import getuser
-from time import time
 
 # If adjusting UserStats, find_worst, choose_users then check with unit tests.
+
 
 class UserStats:
     # Represents a user and their resource usage.
     # "is_worse_than" defines a strict partial order.
 
-    def __init__(self, id, name, count, size, logout):
-        self.id = id
+    def __init__(
+        self, user_id: int, name: str, count: int, size: int, logout: int
+    ) -> None:
+        self.id = user_id
         self.name = name
         self.count = count
         self.size = size
         self.logout = logout
 
-    def is_worse_than(self, other):
-        if other.count > self.count or other.size > self.size or \
-           other.logout < self.logout:
+    def is_worse_than(self, other: "UserStats") -> bool:
+        if (
+            other.count > self.count
+            or other.size > self.size
+            or other.logout < self.logout
+        ):
             return False
-        return self.count > other.count or self.size > other.size or \
-            self.logout < other.logout
+        return (
+            self.count > other.count
+            or self.size > other.size
+            or self.logout < other.logout
+        )
 
 
-def find_worst(user_stats):
+def find_worst(user_stats: List[UserStats]) -> Tuple[List[UserStats], List[UserStats]]:
     # Partition the users into the worst and any remainder.
-    worst = []
-    other = []
+    worst: List[UserStats] = []
+    other: List[UserStats] = []
     for new in user_stats:
         if any([old.is_worse_than(new) for old in worst]):
             other.append(new)
@@ -73,9 +82,11 @@ def find_worst(user_stats):
     return (worst, other)
 
 
-def choose_users(file_count, file_size, user_stats):
+def choose_users(
+    file_count: int, file_size: int, user_stats: List[UserStats]
+) -> List[UserStats]:
     # Iterate through users one by one until enough data would be deleted.
-    to_delete = []
+    to_delete: List[UserStats] = []
     reducing_file_count = True
     reducing_file_size = True
     while user_stats:
@@ -98,7 +109,9 @@ def choose_users(file_count, file_size, user_stats):
     return to_delete
 
 
-def submit(conn, request, expected):
+def submit(
+    conn: BlitzGateway, request: Delete2, expected: Delete2Response
+) -> HandlePrx:
     # Submit a request and wait for it to complete.
     # Returns with the response only if it was of the given type.
     cb = conn.c.submit(request, loops=500)
@@ -109,34 +122,36 @@ def submit(conn, request, expected):
 
     if not isinstance(rsp, expected):
         conn._closeSession()
-        sys.exit('unexpected response: {}'.format(rsp))
+        sys.exit(f"unexpected response: {rsp}")
     return rsp
 
 
-def get_delete_classes(conn):
+def get_delete_classes(conn: BlitzGateway) -> List[str]:
     # Find the model object types to query and target in deleting users' data.
 
     delete_classes = []
 
-    rsp = submit(conn, LegalGraphTargets(request=Delete2()),
-                 LegalGraphTargetsResponse)
+    rsp = submit(conn, LegalGraphTargets(request=Delete2()), LegalGraphTargetsResponse)
 
     params = ParametersI()
     params.addId(rlong(0))
     params.page(0, 1)
 
     for delete_class in rsp.targets:
-        if delete_class.endswith('Link'):
+        if delete_class.endswith("Link"):
             continue
         # TODO: Skipping these only to prevent console output.
-        if delete_class in ['ome.model.meta.GroupExperimenterMap',
-                            'ome.model.meta.Namespace',
-                            'ome.model.meta.ShareMember']:
+        if delete_class in [
+            "ome.model.meta.GroupExperimenterMap",
+            "ome.model.meta.Namespace",
+            "ome.model.meta.ShareMember",
+        ]:
             continue
         try:
             conn.getQueryService().projection(
-                "SELECT 1 FROM {} WHERE details.owner.id = :id"
-                .format(delete_class), params)
+                f"SELECT 1 FROM {delete_class} WHERE details.owner.id = :id",
+                params,
+            )
             delete_classes.append(delete_class)
         except omero.QueryException:
             # TODO: Suppress console warning output.
@@ -144,17 +159,19 @@ def get_delete_classes(conn):
     return delete_classes
 
 
-def delete_data(conn, user_id, dry_run=dry_run):
+def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
     # Delete all the data of the given user. Respects the state of dry_run.
-    all_groups = {'omero.group': '-1'}
+    all_groups = {"omero.group": "-1"}
     params = ParametersI()
     params.addId(rlong(user_id))
     delete = Delete2(dryRun=dry_run, targetObjects={})
     for delete_class in get_delete_classes(conn):
         object_ids = []
         for result in conn.getQueryService().projection(
-                "SELECT id FROM {} WHERE details.owner.id = :id"
-                .format(delete_class), params, all_groups):
+            f"SELECT id FROM {delete_class} WHERE details.owner.id = :id",
+            params,
+            all_groups,
+        ):
             object_id = result[0].val
             object_ids.append(object_id)
         if object_ids:
@@ -163,25 +180,27 @@ def delete_data(conn, user_id, dry_run=dry_run):
         submit(conn, delete, Delete2Response)
 
 
-def find_users(conn, minimum_days=0):
+def find_users(
+    conn: BlitzGateway, minimum_days: int = 0
+) -> Tuple[Dict[int, str], Dict[int, int]]:
     # Determine which users' data to consider deleting.
 
     users = {}
 
     for result in conn.getQueryService().projection(
-            "SELECT id, omeName FROM Experimenter", None):
+        "SELECT id, omeName FROM Experimenter", None
+    ):
         user_id = result[0].val
         user_name = result[1].val
-        if user_name not in ('PUBLIC', 'guest', 'root', 'monitoring'):
+        if user_name not in ("PUBLIC", "guest", "root", "monitoring"):
             users[user_id] = user_name
 
     for result in conn.getQueryService().projection(
-            "SELECT DISTINCT owner.id FROM Session WHERE closed IS NULL",
-            None):
+        "SELECT DISTINCT owner.id FROM Session WHERE closed IS NULL", None
+    ):
         user_id = result[0].val
         if user_id in users.keys():
-            print('Ignoring "{}" (#{}) who is logged in.'
-                  .format(users[user_id], user_id))
+            print(f'Ignoring "{users[user_id]}" (#{user_id}) who is logged in.')
             del users[user_id]
 
     now = time()
@@ -189,8 +208,8 @@ def find_users(conn, minimum_days=0):
     logouts = {}
 
     for result in conn.getQueryService().projection(
-            "SELECT owner.id, MAX(closed) FROM Session GROUP BY owner.id",
-            None):
+        "SELECT owner.id, MAX(closed) FROM Session GROUP BY owner.id", None
+    ):
         user_id = result[0].val
         if user_id not in users:
             continue
@@ -203,24 +222,27 @@ def find_users(conn, minimum_days=0):
             user_logout = result[1].val / 1000
 
         days = (now - user_logout) / (60 * 60 * 24)
-        if (days < minimum_days):
-            print('Ignoring "{}" (#{}) who logged in recently.'
-                  .format(users[user_id], user_id))
+        if days < minimum_days:
+            print(
+                'Ignoring "{}" (#{}) who logged in recently.'.format(
+                    users[user_id], user_id
+                )
+            )
             del users[user_id]
 
         logouts[user_id] = user_logout
     return users, logouts
 
 
-def resource_usage(conn, minimum_days=0):
+def resource_usage(conn: BlitzGateway, minimum_days: int = 0) -> List[UserStats]:
     # Note users' resource usage.
     # DiskUsage2.targetClasses remains too inefficient so iterate.
 
     user_stats = []
     users, logouts = find_users(conn, minimum_days=minimum_days)
     for user_id, user_name in users.items():
-        print('Finding disk usage of "{}" (#{}).'.format(user_name, user_id))
-        user = {'Experimenter': [user_id]}
+        print(f'Finding disk usage of "{user_name}" (#{user_id}).')
+        user = {"Experimenter": [user_id]}
         rsp = submit(conn, DiskUsage2(targetObjects=user), DiskUsage2Response)
 
         file_count = 0
@@ -234,25 +256,35 @@ def resource_usage(conn, minimum_days=0):
                 file_size += usage
 
         if file_count > 0 or file_size > 0:
-            user_stats.append(UserStats(
-                user_id, user_name, file_count, file_size, logouts[user_id]))
+            user_stats.append(
+                UserStats(user_id, user_name, file_count, file_size, logouts[user_id])
+            )
     return user_stats
 
 
-def perform_delete(conn, minimum_days=0, excess_file_count=0, 
-                   excess_file_size=0, dry_run=True):
+def perform_delete(
+    conn: BlitzGateway,
+    minimum_days: int = 0,
+    excess_file_count: int = 0,
+    excess_file_size: int = 0,
+    dry_run: bool = True,
+) -> None:
     # Perform data deletion.
     stats = resource_usage(conn, minimum_days=minimum_days)
-    users = choose_users(excess_file_count, excess_file_size,
-                         resource_usage(conn))
-    print('Found {} user(s) for deletion.'.format(len(users)))
+    users = choose_users(excess_file_count, excess_file_size, stats)
+    print(f"Found {len(users)} user(s) for deletion.")
     for user in users:
-        print('Deleting {} GB of data belonging to "{}" (#{}).'.format(
-              user.size / 1000**3, user.name, user.id,))
+        print(
+            'Deleting {} GB of data belonging to "{}" (#{}).'.format(
+                user.size / 1000 ** 3,
+                user.name,
+                user.id,
+            )
+        )
         delete_data(conn, user.id, dry_run=dry_run)
 
 
-def main():
+def main() -> None:
 
     with omero.cli.cli_login() as cli:
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())

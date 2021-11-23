@@ -58,7 +58,7 @@ repos:
           # default black line length is 88
           "--max-line-length=88",
           # Conflicts with black: E203 whitespace before ':'
-          "--ignore=E203",
+          "--extend-ignore=E203",
           "--rst-roles=class,func,ref,module,const",
         ]
 
