@@ -25,6 +25,7 @@ from time import time
 from typing import Dict, List, Tuple
 
 import omero
+import omero.clients
 from omero.cmd import (
     Delete2,
     Delete2Response,
