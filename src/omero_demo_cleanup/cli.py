@@ -97,7 +97,7 @@ class DemoCleanupControl(BaseControl):
             # Perform data deletion.
             self.ctx.err(
                 "Ignoring users who have logged out within the past {} days.".format(
-                    args.minimum_days
+                    args.days
                 )
             )
 
