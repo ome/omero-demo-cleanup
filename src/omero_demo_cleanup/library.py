@@ -277,7 +277,7 @@ def perform_delete(
     for user in users:
         print(
             'Deleting {} GB of data belonging to "{}" (#{}).'.format(
-                user.size / 1000 ** 3,
+                user.size / 1000**3,
                 user.name,
                 user.id,
             )
