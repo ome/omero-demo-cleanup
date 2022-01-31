@@ -112,12 +112,12 @@ class DemoCleanupControl(BaseControl):
                 )
 
             stats = resource_usage(self.gateway, minimum_days=args.days)
-            users = choose_users(args.inodes, args.gigabytes * 1000 ** 3, stats)
+            users = choose_users(args.inodes, args.gigabytes * 1000**3, stats)
             self.ctx.err(f"Found {len(users)} user(s) for deletion.")
             for user in users:
                 self.ctx.err(
                     'Deleting {} GB of data belonging to "{}" (#{}).'.format(
-                        user.size / 1000 ** 3,
+                        user.size / 1000**3,
                         user.name,
                         user.id,
                     )
