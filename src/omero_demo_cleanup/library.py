@@ -192,7 +192,10 @@ def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
             raise ValueError("Tag: %s not found" % tag_name)
         links = conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id])
         exclude = [link.child.id.val for link in links]
-        print("Excluding %s members linked to Tag:%s %s" % (len(exclude), tag.id, tag.textValue))
+        print(
+            "Excluding %s members linked to Tag:%s %s"
+            % (len(exclude), tag.id, tag.textValue)
+        )
     return exclude
 
 
@@ -252,14 +255,15 @@ def find_users(
 
 
 def resource_usage(
-        conn: BlitzGateway, minimum_days: int = 0, exclude_users:List[int] = []
-    ) -> List[UserStats]:
+    conn: BlitzGateway, minimum_days: int = 0, exclude_users: List[int] = []
+) -> List[UserStats]:
     # Note users' resource usage.
     # DiskUsage2.targetClasses remains too inefficient so iterate.
 
     user_stats = []
-    users, logouts = find_users(conn, minimum_days=minimum_days,
-                                exclude_users=exclude_users)
+    users, logouts = find_users(
+        conn, minimum_days=minimum_days, exclude_users=exclude_users
+    )
     for user_id, user_name in users.items():
         print(f'Finding disk usage of "{user_name}" (#{user_id}).')
         user = {"Experimenter": [user_id]}
@@ -305,7 +309,6 @@ def perform_delete(
 
 
 def main() -> None:
-
     with omero.cli.cli_login() as cli:
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())
         try:
