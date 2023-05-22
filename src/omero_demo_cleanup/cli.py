@@ -25,7 +25,7 @@ from typing import Any, Callable
 
 from omero.cli import BaseControl, Parser
 from omero.gateway import BlitzGateway
-from omero_demo_cleanup.library import choose_users, delete_data, resource_usage
+from omero_demo_cleanup.library import choose_users, delete_data, resource_usage, users_by_group
 
 HELP = """Cleanup disk space on OMERO.server """
 
@@ -85,6 +85,11 @@ class DemoCleanupControl(BaseControl):
             help="Perform the data deletion rather than running in dry-run mode."
             " Default: false.",
         )
+        parser.add_argument(
+            "--exclude-group",
+            "-e",
+            help="Members of this group (Name or ID) are excluded from cleanup.",
+        )
         parser.set_defaults(func=self.cleanup)
 
     @gateway_required
@@ -111,7 +116,8 @@ class DemoCleanupControl(BaseControl):
                     )
                 )
 
-            stats = resource_usage(self.gateway, minimum_days=args.days)
+            exclude = users_by_group(self.gateway, args.exclude_group)
+            stats = resource_usage(self.gateway, minimum_days=args.days, exclude_users=exclude)
             users = choose_users(args.inodes, args.gigabytes * 1000**3, stats)
             self.ctx.err(f"Found {len(users)} user(s) for deletion.")
             for user in users:

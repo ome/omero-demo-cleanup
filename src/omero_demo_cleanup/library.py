@@ -181,8 +181,22 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
         submit(conn, delete, Delete2Response)
 
 
+def users_by_group(conn: BlitzGateway, group_name: str) -> List[int]:
+    exclude = []
+    if group_name:
+        if group_name.isnumeric():
+            group = conn.getObject("ExperimenterGroup", group_name)
+        else:
+            group = conn.getObject("ExperimenterGroup", attributes={"name": group_name})
+        if group is None:
+            raise ValueError("Group: %s not found" % group_name)
+        exclude = [gem.child.id.val for gem in group.copyGroupExperimenterMap()]
+        print("Excluding %s members of group: %s" % (len(exclude), group_name))
+    return exclude
+
+
 def find_users(
-    conn: BlitzGateway, minimum_days: int = 0
+    conn: BlitzGateway, minimum_days: int = 0, exclude_users: List[int] = []
 ) -> Tuple[Dict[int, str], Dict[int, int]]:
     # Determine which users' data to consider deleting.
 
@@ -194,7 +208,8 @@ def find_users(
         user_id = result[0].val
         user_name = result[1].val
         if user_name not in ("PUBLIC", "guest", "root", "monitoring"):
-            users[user_id] = user_name
+            if user_id not in exclude_users:
+                users[user_id] = user_name
 
     for result in conn.getQueryService().projection(
         "SELECT DISTINCT owner.id FROM Session WHERE closed IS NULL", None
@@ -235,12 +250,15 @@ def find_users(
     return users, logouts
 
 
-def resource_usage(conn: BlitzGateway, minimum_days: int = 0) -> List[UserStats]:
+def resource_usage(
+        conn: BlitzGateway, minimum_days: int = 0, exclude_users:List[int] = []
+    ) -> List[UserStats]:
     # Note users' resource usage.
     # DiskUsage2.targetClasses remains too inefficient so iterate.
 
     user_stats = []
-    users, logouts = find_users(conn, minimum_days=minimum_days)
+    users, logouts = find_users(conn, minimum_days=minimum_days,
+                                exclude_users=exclude_users)
     for user_id, user_name in users.items():
         print(f'Finding disk usage of "{user_name}" (#{user_id}).')
         user = {"Experimenter": [user_id]}
