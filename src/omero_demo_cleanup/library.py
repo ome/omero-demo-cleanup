@@ -181,17 +181,18 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
         submit(conn, delete, Delete2Response)
 
 
-def users_by_group(conn: BlitzGateway, group_name: str) -> List[int]:
+def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
     exclude = []
-    if group_name:
-        if group_name.isnumeric():
-            group = conn.getObject("ExperimenterGroup", group_name)
+    if tag_name:
+        if tag_name.isnumeric():
+            tag = conn.getObject("Annotation", tag_name)
         else:
-            group = conn.getObject("ExperimenterGroup", attributes={"name": group_name})
-        if group is None:
-            raise ValueError("Group: %s not found" % group_name)
-        exclude = [gem.child.id.val for gem in group.copyGroupExperimenterMap()]
-        print("Excluding %s members of Group:%s %s" % (len(exclude), group.id, group.name))
+            tag = conn.getObject("TagAnnotation", attributes={"textValue": tag_name})
+        if tag is None:
+            raise ValueError("Tag: %s not found" % tag_name)
+        links = conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id])
+        exclude = [link.child.id.val for link in links]
+        print("Excluding %s members linked to Tag:%s %s" % (len(exclude), tag.id, tag.textValue))
     return exclude
 
 

@@ -29,7 +29,7 @@ from omero_demo_cleanup.library import (
     choose_users,
     delete_data,
     resource_usage,
-    users_by_group,
+    users_by_tag,
 )
 
 HELP = """Cleanup disk space on OMERO.server """
@@ -91,9 +91,9 @@ class DemoCleanupControl(BaseControl):
             " Default: false.",
         )
         parser.add_argument(
-            "--exclude-group",
+            "--exclude-tag",
             "-e",
-            help="Members of this group (Name or ID) are excluded from cleanup.",
+            help="Members tagged with Tag (Name or ID) are excluded from cleanup.",
         )
         parser.set_defaults(func=self.cleanup)
 
@@ -120,7 +120,7 @@ class DemoCleanupControl(BaseControl):
                     )
                 )
 
-            exclude = users_by_group(self.gateway, args.exclude_group)
+            exclude = users_by_tag(self.gateway, args.exclude_tag)
             stats = resource_usage(
                 self.gateway, minimum_days=args.days, exclude_users=exclude
             )
