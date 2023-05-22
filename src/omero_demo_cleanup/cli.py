@@ -25,7 +25,12 @@ from typing import Any, Callable
 
 from omero.cli import BaseControl, Parser
 from omero.gateway import BlitzGateway
-from omero_demo_cleanup.library import choose_users, delete_data, resource_usage, users_by_group
+from omero_demo_cleanup.library import (
+    choose_users,
+    delete_data,
+    resource_usage,
+    users_by_group,
+)
 
 HELP = """Cleanup disk space on OMERO.server """
 
@@ -94,7 +99,6 @@ class DemoCleanupControl(BaseControl):
 
     @gateway_required
     def cleanup(self, args: argparse.Namespace) -> None:
-
         if args.inodes == 0 and args.gigabytes == 0:
             self.ctx.die(23, "Please specify how much to delete")
 
@@ -117,7 +121,9 @@ class DemoCleanupControl(BaseControl):
                 )
 
             exclude = users_by_group(self.gateway, args.exclude_group)
-            stats = resource_usage(self.gateway, minimum_days=args.days, exclude_users=exclude)
+            stats = resource_usage(
+                self.gateway, minimum_days=args.days, exclude_users=exclude
+            )
             users = choose_users(args.inodes, args.gigabytes * 1000**3, stats)
             self.ctx.err(f"Found {len(users)} user(s) for deletion.")
             for user in users:

@@ -191,7 +191,7 @@ def users_by_group(conn: BlitzGateway, group_name: str) -> List[int]:
         if group is None:
             raise ValueError("Group: %s not found" % group_name)
         exclude = [gem.child.id.val for gem in group.copyGroupExperimenterMap()]
-        print("Excluding %s members of group: %s" % (len(exclude), group_name))
+        print("Excluding %s members of Group:%s %s" % (len(exclude), group.id, group.name))
     return exclude
 
 
