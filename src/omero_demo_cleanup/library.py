@@ -198,8 +198,8 @@ def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
         )
         for link in links:
             exp = link.parent
-            full_name = "%s %s" % (unwrap(exp.firstName), unwrap(exp.lastName))
-            print("  Experimenter:%s %s" % (exp.id.val, full_name))
+            full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
+            print(f"  Experimenter:{exp.id.val} {full_name}")
     return exclude
 
 
