@@ -36,7 +36,7 @@ from omero.cmd import (
     LegalGraphTargetsResponse,
 )
 from omero.gateway import BlitzGateway
-from omero.rtypes import rlong
+from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
 
 # If adjusting UserStats, find_worst, choose_users then check with unit tests.
@@ -190,12 +190,16 @@ def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
             tag = conn.getObject("TagAnnotation", attributes={"textValue": tag_name})
         if tag is None:
             raise ValueError("Tag: %s not found" % tag_name)
-        links = conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id])
-        exclude = [link.child.id.val for link in links]
+        links = list(conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id]))
+        exclude = [link.parent.id.val for link in links]
         print(
-            "Excluding %s members linked to Tag:%s %s"
+            "Excluding %s members linked to Tag:%s %s:"
             % (len(exclude), tag.id, tag.textValue)
         )
+        for link in links:
+            exp = link.parent
+            full_name = "%s %s" % (unwrap(exp.firstName), unwrap(exp.lastName))
+            print("  Experimenter:%s %s" % (exp.id.val, full_name))
     return exclude
 
 
