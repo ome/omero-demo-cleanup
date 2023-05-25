@@ -189,11 +189,13 @@ def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
     if tag_name.isnumeric():
         tag = conn.getObject("Annotation", tag_name)
     else:
-        tags = list(conn.getObjects("TagAnnotation", attributes={"textValue": tag_name}))
+        tags = list(
+            conn.getObjects("TagAnnotation", attributes={"textValue": tag_name})
+        )
         tag = tags[0] if len(tags) > 0 else None
         if len(tags) > 1:
             ids = [tag.id for tag in tags]
-            raise ValueError("Multiple Tags with name: %s (%s)" % (tag_name, ids))
+            raise ValueError(f"Multiple Tags with name: {tag_name} ({ids})")
     if tag is None:
         raise ValueError("Tag: %s not found" % tag_name)
     # Check if this is a Tag Group
