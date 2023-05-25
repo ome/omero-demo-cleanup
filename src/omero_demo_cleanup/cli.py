@@ -91,9 +91,10 @@ class DemoCleanupControl(BaseControl):
             " Default: false.",
         )
         parser.add_argument(
-            "--exclude-tag",
-            "-e",
-            help="Members tagged with Tag (Name or ID) are excluded from cleanup.",
+            "--ignore-tag",
+            "-t",
+            default="NO DELETE",
+            help="Members tagged with this Tag (Name or ID) or child Tags are ignored.",
         )
         parser.set_defaults(func=self.cleanup)
 
@@ -120,9 +121,9 @@ class DemoCleanupControl(BaseControl):
                     )
                 )
 
-            exclude = users_by_tag(self.gateway, args.exclude_tag)
+            ignore = users_by_tag(self.gateway, args.ignore_tag)
             stats = resource_usage(
-                self.gateway, minimum_days=args.days, exclude_users=exclude
+                self.gateway, minimum_days=args.days, ignore_users=ignore
             )
             users = choose_users(args.inodes, args.gigabytes * 1000**3, stats)
             self.ctx.err(f"Found {len(users)} user(s) for deletion.")

@@ -182,29 +182,49 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
 
 
 def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
+    if not tag_name or tag_name == "None":
+        print("No Tag chosen for ingoring users")
+        return []
     exclude = []
-    if tag_name:
-        if tag_name.isnumeric():
-            tag = conn.getObject("Annotation", tag_name)
-        else:
-            tag = conn.getObject("TagAnnotation", attributes={"textValue": tag_name})
-        if tag is None:
-            raise ValueError("Tag: %s not found" % tag_name)
-        links = list(conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id]))
-        exclude = [link.parent.id.val for link in links]
+    if tag_name.isnumeric():
+        tag = conn.getObject("Annotation", tag_name)
+    else:
+        tags = list(conn.getObjects("TagAnnotation", attributes={"textValue": tag_name}))
+        tag = tags[0] if len(tags) > 0 else None
+        if len(tags) > 1:
+            ids = [tag.id for tag in tags]
+            raise ValueError("Multiple Tags with name: %s (%s)" % (tag_name, ids))
+    if tag is None:
+        raise ValueError("Tag: %s not found" % tag_name)
+    # Check if this is a Tag Group
+    tag_links = list(conn.getAnnotationLinks("Annotation", parent_ids=[tag.id]))
+
+    # Handle Tagged Experimenters first...
+    links = list(conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id]))
+    exclude.extend([link.parent.id.val for link in links])
+    # If we have NO child Tags, then always print:
+    if len(links) > 0 or len(tag_links) == 0:
         print(
-            "Excluding %s members linked to Tag:%s %s:"
-            % (len(exclude), tag.id, tag.textValue)
+            "Ignoring %s members linked to Tag:%s %s:"
+            % (len(links), tag.id, tag.textValue)
         )
-        for link in links:
-            exp = link.parent
-            full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
-            print(f"  Experimenter:{exp.id.val} {full_name}")
+
+    for link in links:
+        exp = link.parent
+        full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
+        print(f"  Experimenter:{exp.id.val} {full_name}")
+
+    # Then recursively check any child Tags...
+    if len(tag_links) > 0 or len(links) == 0:
+        print(f"Tag:{tag.id} {tag.textValue} has {len(tag_links)} child Tags...")
+    for link in tag_links:
+        exclude.extend(users_by_tag(conn, str(link.child.id.val)))
+
     return exclude
 
 
 def find_users(
-    conn: BlitzGateway, minimum_days: int = 0, exclude_users: List[int] = []
+    conn: BlitzGateway, minimum_days: int = 0, ignore_users: List[int] = []
 ) -> Tuple[Dict[int, str], Dict[int, int]]:
     # Determine which users' data to consider deleting.
 
@@ -216,7 +236,7 @@ def find_users(
         user_id = result[0].val
         user_name = result[1].val
         if user_name not in ("PUBLIC", "guest", "root", "monitoring"):
-            if user_id not in exclude_users:
+            if user_id not in ignore_users:
                 users[user_id] = user_name
 
     for result in conn.getQueryService().projection(
@@ -259,14 +279,14 @@ def find_users(
 
 
 def resource_usage(
-    conn: BlitzGateway, minimum_days: int = 0, exclude_users: List[int] = []
+    conn: BlitzGateway, minimum_days: int = 0, ignore_users: List[int] = []
 ) -> List[UserStats]:
     # Note users' resource usage.
     # DiskUsage2.targetClasses remains too inefficient so iterate.
 
     user_stats = []
     users, logouts = find_users(
-        conn, minimum_days=minimum_days, exclude_users=exclude_users
+        conn, minimum_days=minimum_days, ignore_users=ignore_users
     )
     for user_id, user_name in users.items():
         print(f'Finding disk usage of "{user_name}" (#{user_id}).')
