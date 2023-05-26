@@ -25,7 +25,13 @@ from typing import Any, Callable
 
 from omero.cli import BaseControl, Parser
 from omero.gateway import BlitzGateway
-from omero_demo_cleanup.library import choose_users, delete_data, resource_usage
+from omero_demo_cleanup.library import (
+    choose_users,
+    delete_data,
+    resource_usage,
+    users_by_id_or_username,
+    users_by_tag,
+)
 
 HELP = """Cleanup disk space on OMERO.server """
 
@@ -85,11 +91,20 @@ class DemoCleanupControl(BaseControl):
             help="Perform the data deletion rather than running in dry-run mode."
             " Default: false.",
         )
+        parser.add_argument(
+            "--ignore-tag",
+            "-t",
+            default="NO DELETE",
+            help="Members tagged with this Tag (Name or ID) or child Tags are ignored.",
+        )
+        parser.add_argument(
+            "--ignore-users",
+            help="Ingore users: Comma-separated IDs and/or user-names.",
+        )
         parser.set_defaults(func=self.cleanup)
 
     @gateway_required
     def cleanup(self, args: argparse.Namespace) -> None:
-
         if args.inodes == 0 and args.gigabytes == 0:
             self.ctx.die(23, "Please specify how much to delete")
 
@@ -111,7 +126,11 @@ class DemoCleanupControl(BaseControl):
                     )
                 )
 
-            stats = resource_usage(self.gateway, minimum_days=args.days)
+            ignore = users_by_tag(self.gateway, args.ignore_tag)
+            ignore.extend(users_by_id_or_username(self.gateway, args.ignore_users))
+            stats = resource_usage(
+                self.gateway, minimum_days=args.days, ignore_users=ignore
+            )
             users = choose_users(args.inodes, args.gigabytes * 1000**3, stats)
             self.ctx.err(f"Found {len(users)} user(s) for deletion.")
             for user in users:

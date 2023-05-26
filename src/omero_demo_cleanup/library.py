@@ -36,7 +36,7 @@ from omero.cmd import (
     LegalGraphTargetsResponse,
 )
 from omero.gateway import BlitzGateway
-from omero.rtypes import rlong
+from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
 
 # If adjusting UserStats, find_worst, choose_users then check with unit tests.
@@ -181,8 +181,78 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
         submit(conn, delete, Delete2Response)
 
 
+def exp_to_str(exp):
+    # "user-3" (#6) Charles Darwin
+    full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
+    return f'"{exp.omeName.val}" (#{exp.id.val}) {full_name}'
+
+
+def users_by_id_or_username(conn: BlitzGateway, ignore_users: str) -> List[int]:
+
+    if not ignore_users:
+        return []
+    exclude = []
+    users = ignore_users.split(",")
+    print(f"Ignoring {len(users)} users by ID or Username:")
+    for user_str in users:
+        if user_str.isnumeric():
+            exp = conn.getQueryService().get("Experimenter", int(user_str))
+            print("  " + exp_to_str(exp))
+            exclude.append(exp.id.val)
+        else:
+            exp = conn.getObject("Experimenter", attributes={"omeName": user_str})
+            if exp is None:
+                raise ValueError("Experimenter: %s not found" % user_str)
+            print("  " + exp_to_str(exp._obj))
+            exclude.append(exp.id)
+    return exclude
+
+
+def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
+    # Get users linked to Tag (Name or ID) or linked to child Tags.
+    if not tag_name or tag_name == "None":
+        print("No Tag chosen for ingoring users")
+        return []
+    exclude = []
+    if tag_name.isnumeric():
+        tag = conn.getObject("Annotation", tag_name)
+    else:
+        tags = list(
+            conn.getObjects("TagAnnotation", attributes={"textValue": tag_name})
+        )
+        tag = tags[0] if len(tags) > 0 else None
+        if len(tags) > 1:
+            ids = [tag.id for tag in tags]
+            raise ValueError(f"Multiple Tags with name: {tag_name} ({ids})")
+    if tag is None:
+        raise ValueError("Tag: %s not found" % tag_name)
+    # Check if this is a Tag Group
+    tag_links = list(conn.getAnnotationLinks("Annotation", parent_ids=[tag.id]))
+
+    # Handle Tagged Experimenters first...
+    links = list(conn.getAnnotationLinks("Experimenter", ann_ids=[tag.id]))
+    exclude.extend([link.parent.id.val for link in links])
+    # If we have NO child Tags, then always print:
+    if len(links) > 0 or len(tag_links) == 0:
+        print(
+            "Ignoring %s users linked to Tag:%s %s:"
+            % (len(links), tag.id, tag.textValue)
+        )
+
+    for link in links:
+        print("  " + exp_to_str(link.parent))
+
+    # Then recursively check any child Tags...
+    if len(tag_links) > 0 or len(links) == 0:
+        print(f"Tag:{tag.id} {tag.textValue} has {len(tag_links)} child Tags...")
+    for link in tag_links:
+        exclude.extend(users_by_tag(conn, str(link.child.id.val)))
+
+    return exclude
+
+
 def find_users(
-    conn: BlitzGateway, minimum_days: int = 0
+    conn: BlitzGateway, minimum_days: int = 0, ignore_users: List[int] = []
 ) -> Tuple[Dict[int, str], Dict[int, int]]:
     # Determine which users' data to consider deleting.
 
@@ -194,7 +264,8 @@ def find_users(
         user_id = result[0].val
         user_name = result[1].val
         if user_name not in ("PUBLIC", "guest", "root", "monitoring"):
-            users[user_id] = user_name
+            if user_id not in ignore_users:
+                users[user_id] = user_name
 
     for result in conn.getQueryService().projection(
         "SELECT DISTINCT owner.id FROM Session WHERE closed IS NULL", None
@@ -235,12 +306,16 @@ def find_users(
     return users, logouts
 
 
-def resource_usage(conn: BlitzGateway, minimum_days: int = 0) -> List[UserStats]:
+def resource_usage(
+    conn: BlitzGateway, minimum_days: int = 0, ignore_users: List[int] = []
+) -> List[UserStats]:
     # Note users' resource usage.
     # DiskUsage2.targetClasses remains too inefficient so iterate.
 
     user_stats = []
-    users, logouts = find_users(conn, minimum_days=minimum_days)
+    users, logouts = find_users(
+        conn, minimum_days=minimum_days, ignore_users=ignore_users
+    )
     for user_id, user_name in users.items():
         print(f'Finding disk usage of "{user_name}" (#{user_id}).')
         user = {"Experimenter": [user_id]}
@@ -286,7 +361,6 @@ def perform_delete(
 
 
 def main() -> None:
-
     with omero.cli.cli_login() as cli:
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())
         try:
