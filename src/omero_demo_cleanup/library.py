@@ -182,8 +182,9 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
 
 
 def exp_to_str(exp):
+    # "user-3" (#6) Charles Darwin
     full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
-    return f"Experimenter:{exp.id.val} {full_name}"
+    return f'"{exp.omeName.val}" (#{exp.id.val}) {full_name}"'
 
 
 def users_by_id_or_username(conn: BlitzGateway, ignore_users: str) -> List[int]:
