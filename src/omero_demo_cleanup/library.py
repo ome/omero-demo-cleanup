@@ -181,7 +181,34 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
         submit(conn, delete, Delete2Response)
 
 
+def exp_to_str(exp):
+    full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
+    return f"Experimenter:{exp.id.val} {full_name}"
+
+
+def users_by_id_or_username(conn: BlitzGateway, ignore_users:str) -> List[int]:
+
+    if not ignore_users:
+        return []
+    exclude = []
+    users = ignore_users.split(",")
+    print(f"Ignoring {len(users)} users by ID or Username:")
+    for user_str in users:
+        if user_str.isnumeric():
+            exp = conn.getQueryService().get("Experimenter", int(user_str))
+            print("  " + exp_to_str(exp))
+            exclude.append(exp.id.val)
+        else:
+            exp = conn.getObject("Experimenter", attributes={"omeName": user_str})
+            if exp is None:
+                raise ValueError("Experimenter: %s not found" % user_str)
+            print("  " + exp_to_str(exp._obj))
+            exclude.append(exp.id)
+    return exclude
+
+
 def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
+    # Get users linked to Tag (Name or ID) or linked to child Tags.
     if not tag_name or tag_name == "None":
         print("No Tag chosen for ingoring users")
         return []
@@ -207,14 +234,12 @@ def users_by_tag(conn: BlitzGateway, tag_name: str) -> List[int]:
     # If we have NO child Tags, then always print:
     if len(links) > 0 or len(tag_links) == 0:
         print(
-            "Ignoring %s members linked to Tag:%s %s:"
+            "Ignoring %s users linked to Tag:%s %s:"
             % (len(links), tag.id, tag.textValue)
         )
 
     for link in links:
-        exp = link.parent
-        full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
-        print(f"  Experimenter:{exp.id.val} {full_name}")
+        print("  " + exp_to_str(link.parent))
 
     # Then recursively check any child Tags...
     if len(tag_links) > 0 or len(links) == 0:

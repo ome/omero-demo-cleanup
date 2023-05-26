@@ -29,6 +29,7 @@ from omero_demo_cleanup.library import (
     choose_users,
     delete_data,
     resource_usage,
+    users_by_id_or_username,
     users_by_tag,
 )
 
@@ -96,6 +97,10 @@ class DemoCleanupControl(BaseControl):
             default="NO DELETE",
             help="Members tagged with this Tag (Name or ID) or child Tags are ignored.",
         )
+        parser.add_argument(
+            "--ignore-users",
+            help="Ingore users: Comma-separated IDs and/or user-names.",
+        )
         parser.set_defaults(func=self.cleanup)
 
     @gateway_required
@@ -122,6 +127,7 @@ class DemoCleanupControl(BaseControl):
                 )
 
             ignore = users_by_tag(self.gateway, args.ignore_tag)
+            ignore.extend(users_by_id_or_username(self.gateway, args.ignore_users))
             stats = resource_usage(
                 self.gateway, minimum_days=args.days, ignore_users=ignore
             )
