@@ -47,6 +47,7 @@ def gateway_required(func: Callable) -> Callable:
     def _wrapper(self: Any, *args: Any, **kwargs: Any) -> Callable:
         self.client = self.ctx.conn(*args)
         self.gateway = BlitzGateway(client_obj=self.client)
+        self.gateway.SERVICE_OPTS.setOmeroGroup("-1")
 
         try:
             return func(self, *args, **kwargs)
