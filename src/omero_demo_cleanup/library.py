@@ -363,6 +363,7 @@ def perform_delete(
 def main() -> None:
     with omero.cli.cli_login() as cli:
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())
+        conn.SERVICE_OPTS.setOmeroGroup("-1")
         try:
             perform_delete(conn)
         except KeyboardInterrupt:
