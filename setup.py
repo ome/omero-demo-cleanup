@@ -34,7 +34,7 @@ long_description = get_long_description()
 
 setup(
     name="omero-demo-cleanup",
-    version="0.2.1",
+    version="0.2.2.dev0",
     packages=["omero_demo_cleanup", "omero.plugins"],
     package_dir={"": "src"},
     description="Plugin for managing the disk space on the demo server.",
