@@ -320,21 +320,24 @@ def resource_usage(
     for user_id, user_name in users.items():
         print(f'Finding disk usage of "{user_name}" (#{user_id}).')
         user = {"Experimenter": [user_id]}
-        rsp = submit(conn, DiskUsage2(targetObjects=user), DiskUsage2Response)
-
         file_count = 0
         file_size = 0
 
-        for who, usage in rsp.totalFileCount.items():
-            if who.first == user_id:
-                file_count += usage
-        for who, usage in rsp.totalBytesUsed.items():
-            if who.first == user_id:
-                file_size += usage
+        try:
+            rsp = submit(conn, DiskUsage2(targetObjects=user), DiskUsage2Response)
+
+            for who, usage in rsp.totalFileCount.items():
+                if who.first == user_id:
+                    file_count += usage
+            for who, usage in rsp.totalBytesUsed.items():
+                if who.first == user_id:
+                    file_size += usage
+        except Exception:
+            print(f'FAILED to count data for "{user_name}" (#{user_id}).')
 
         if file_count > 0 or file_size > 0:
             user_stats.append(
-                UserStats(user_id, user_name, file_count, file_size, logouts[user_id])
+                UserStats(user_id, user_name, file_count, file_size, logouts.get(user_id, 0))
             )
     return user_stats
 
