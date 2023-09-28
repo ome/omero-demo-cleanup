@@ -337,7 +337,9 @@ def resource_usage(
 
         if file_count > 0 or file_size > 0:
             user_stats.append(
-                UserStats(user_id, user_name, file_count, file_size, logouts.get(user_id, 0))
+                UserStats(
+                    user_id, user_name, file_count, file_size, logouts.get(user_id, 0)
+                )
             )
     return user_stats
 
