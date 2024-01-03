@@ -188,7 +188,6 @@ def exp_to_str(exp):
 
 
 def users_by_id_or_username(conn: BlitzGateway, ignore_users: str) -> List[int]:
-
     if not ignore_users:
         return []
     exclude = []
