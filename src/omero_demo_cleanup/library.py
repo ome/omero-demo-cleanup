@@ -35,6 +35,7 @@ from omero.cmd import (
     LegalGraphTargets,
     LegalGraphTargetsResponse,
 )
+from omero.model import Experimenter
 from omero.gateway import BlitzGateway
 from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
@@ -181,7 +182,7 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
         submit(conn, delete, Delete2Response)
 
 
-def exp_to_str(exp):
+def exp_to_str(exp: Experimenter):
     # "user-3" (#6) Charles Darwin
     full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
     return f'"{exp.omeName.val}" (#{exp.id.val}) {full_name}'
