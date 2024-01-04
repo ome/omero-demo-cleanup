@@ -39,6 +39,7 @@ from omero.model import Experimenter
 from omero.gateway import BlitzGateway
 from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
+from omero.plugins import hql
 
 # If adjusting UserStats, find_worst, choose_users then check with unit tests.
 
