@@ -37,7 +37,7 @@ from omero.cmd import (
 )
 from omero.gateway import BlitzGateway
 from omero.model import Experimenter
-from omero.plugins import hql  # type: ignore[attr-defined]
+from omero.plugins import hql  # type: ignore[attr-defined] # noqa
 from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
 
