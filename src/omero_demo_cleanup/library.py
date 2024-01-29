@@ -37,7 +37,7 @@ from omero.cmd import (
 )
 from omero.gateway import BlitzGateway
 from omero.model import Experimenter
-from omero.plugins import hql
+from omero.plugins.hql.omero import QueryException
 from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
 
@@ -156,7 +156,7 @@ def get_delete_classes(conn: BlitzGateway) -> List[str]:
                 params,
             )
             delete_classes.append(delete_class)
-        except omero.QueryException:
+        except QueryException:
             # TODO: Suppress console warning output.
             pass
     return delete_classes
