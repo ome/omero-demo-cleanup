@@ -37,7 +37,7 @@ from omero.cmd import (
 )
 from omero.gateway import BlitzGateway
 from omero.model import Experimenter
-from omero.plugins import hql  # type: ignore[attr-defined] 
+from omero.plugins import hql  # type: ignore[attr-defined]
 from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
 
@@ -156,7 +156,7 @@ def get_delete_classes(conn: BlitzGateway) -> List[str]:
                 params,
             )
             delete_classes.append(delete_class)
-        except omero.QueryException:  # type: ignore[attr-defined] 
+        except omero.QueryException:  # type: ignore[attr-defined]
             # TODO: Suppress console warning output.
             pass
     return delete_classes
@@ -362,7 +362,7 @@ def perform_delete(
 
 
 def main() -> None:
-    with omero.cli.cli_login() as cli:  # type: ignore[attr-defined] 
+    with omero.cli.cli_login() as cli:  # type: ignore[attr-defined]
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())
         conn.SERVICE_OPTS.setOmeroGroup("-1")
         try:
