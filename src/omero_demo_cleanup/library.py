@@ -36,6 +36,8 @@ from omero.cmd import (
     LegalGraphTargetsResponse,
 )
 from omero.gateway import BlitzGateway
+from omero.model import Experimenter
+from omero.plugins import hql  # type: ignore[attr-defined] # noqa
 from omero.rtypes import rlong, unwrap
 from omero.sys import ParametersI
 
@@ -154,7 +156,7 @@ def get_delete_classes(conn: BlitzGateway) -> List[str]:
                 params,
             )
             delete_classes.append(delete_class)
-        except omero.QueryException:
+        except omero.QueryException:  # type: ignore[attr-defined]
             # TODO: Suppress console warning output.
             pass
     return delete_classes
@@ -181,14 +183,13 @@ def delete_data(conn: BlitzGateway, user_id: int, dry_run: bool = True) -> None:
         submit(conn, delete, Delete2Response)
 
 
-def exp_to_str(exp):
+def exp_to_str(exp: Experimenter) -> str:
     # "user-3" (#6) Charles Darwin
     full_name = f"{unwrap(exp.firstName)} {unwrap(exp.lastName)}"
     return f'"{exp.omeName.val}" (#{exp.id.val}) {full_name}'
 
 
 def users_by_id_or_username(conn: BlitzGateway, ignore_users: str) -> List[int]:
-
     if not ignore_users:
         return []
     exclude = []
@@ -361,7 +362,7 @@ def perform_delete(
 
 
 def main() -> None:
-    with omero.cli.cli_login() as cli:
+    with omero.cli.cli_login() as cli:  # type: ignore[attr-defined]
         conn = omero.gateway.BlitzGateway(client_obj=cli.get_client())
         conn.SERVICE_OPTS.setOmeroGroup("-1")
         try:

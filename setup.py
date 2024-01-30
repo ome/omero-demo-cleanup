@@ -52,7 +52,7 @@ setup(
     ],
     author="The Open Microscopy Team",
     author_email="",
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     install_requires=["omero-py>=5.6.0"],
     zip_safe=True,
     keywords=["OMERO.CLI", "plugin"],
