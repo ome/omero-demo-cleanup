@@ -333,9 +333,7 @@ def resource_usage(
                 if who.first == user_id:
                     file_size += usage
         except Exception:  # noqa
-            print(
-                f'FAILED to count data for "{user_name}" (#{user_id}), '
-            )
+            print(f'FAILED to count data for "{user_name}" (#{user_id}), ')
 
         if file_count > 0 or file_size > 0:
             user_stats.append(
