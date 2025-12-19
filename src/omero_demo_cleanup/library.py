@@ -334,7 +334,8 @@ def resource_usage(
                     file_size += usage
         except Exception as ex: # noqa
             print(
-                f'FAILED to count data for "{user_name}" (#{user_id}), error message is {ex}.'
+                f'FAILED to count data for "{user_name}" (#{user_id}), '
+                f 'error message is {ex}.'
             )
 
         if file_count > 0 or file_size > 0:
