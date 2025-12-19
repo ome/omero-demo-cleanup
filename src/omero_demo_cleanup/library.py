@@ -332,7 +332,7 @@ def resource_usage(
             for who, usage in rsp.totalBytesUsed.items():
                 if who.first == user_id:
                     file_size += usage
-        except Exception as ex:  # noqa
+        except Exception:  # noqa
             print(
                 f'FAILED to count data for "{user_name}" (#{user_id}), '
             )
