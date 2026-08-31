@@ -7,13 +7,13 @@ repos:
       - id: seed-isort-config
 
   - repo: https://github.com/PyCQA/isort
-    rev: 7.0.0
+    rev: 9.0.1
     hooks:
       - id: isort
         args: ["--profile", "black"]
 
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 25.12.0
+    rev: 26.5.1
     hooks:
       - id: black
         args: [--target-version=py36]
@@ -62,14 +62,14 @@ repos:
         ]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+    rev: v2.3.1
     hooks:
       - id: mypy
       # This is for checking tests/* (everything else has a stricter check
       # below), but since there's no include it's run on everything
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+    rev: v2.3.1
     hooks:
       - id: mypy
         args: [
@@ -79,7 +79,7 @@ repos:
         exclude: tests/
 
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.1
+    rev: v1.38.0
     hooks:
       - id: yamllint
         # args: [--config-data=relaxed]
