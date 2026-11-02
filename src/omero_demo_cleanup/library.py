@@ -103,7 +103,7 @@ def choose_users(
                 user_stat.size = 0
         if not (reducing_file_count or reducing_file_size):
             break
-        (worst, other) = find_worst(user_stats)
+        worst, other = find_worst(user_stats)
         target_user = worst[0]
         user_stats = worst[1:] + other
         to_delete.append(target_user)
